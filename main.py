@@ -3,6 +3,7 @@ from dotenv import load_dotenv
 from google import genai
 from google.genai import types
 import sys
+from functions import get_files_info
 
 def main():
     verbose = False
