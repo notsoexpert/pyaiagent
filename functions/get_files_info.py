@@ -13,10 +13,13 @@ def get_files_info(working_directory, directory=None):
         return f'Error: "{absPath}" is not a directory'
     
     dir = ""
-    try:
-        dir = os.path.abspath(os.path.join(absPath, directory))
-    except Exception as e:
-        return f'Error: could not get absolute path from {os.path.join(absPath, directory)}'
+    if directory is None:
+        dir = absPath
+    else:
+        try:
+            dir = os.path.abspath(os.path.join(absPath, directory))
+        except Exception as e:
+            return f'Error: could not get absolute path from {os.path.join(absPath, directory)}'
     
     if not os.path.exists(dir):
         return f'Error: directory "{dir}" does not exist'
