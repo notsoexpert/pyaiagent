@@ -62,6 +62,7 @@ def call_function(function_call_part, verbose=False):
 
 def main():
     verbose = False
+    MAX_LOOPS = 20
     load_dotenv("key.env")
     api_key = os.environ.get("GEMINI_API_KEY")
     client = genai.Client(api_key=api_key)
@@ -76,25 +77,33 @@ def main():
     messages = [
         types.Content(role="user", parts=[types.Part(text=sys.argv[1])]),
     ]
-    generatedContent = client.models.generate_content(
-        model="gemini-2.0-flash-001", 
-        contents=messages, 
-        config=types.GenerateContentConfig(tools=[get_available_functions()], system_instruction=system_prompt),
-    )
-    fn_calls = generatedContent.function_calls
-    if fn_calls is None or len(fn_calls) == 0:
-        print(generatedContent.text)
-    else:
+    for _ in range(0, MAX_LOOPS):
+        response = client.models.generate_content(
+            model="gemini-2.0-flash-001", 
+            contents=messages, 
+            config=types.GenerateContentConfig(tools=[get_available_functions()], system_instruction=system_prompt),
+        )
+
+        for msg in response.candidates:
+            messages.append(msg.content)
+        
+        fn_calls = response.function_calls
+        if fn_calls is None or len(fn_calls) == 0:
+            print(response.text)
+            break
+    
         for function_call_part in fn_calls:
             content = call_function(function_call_part, verbose)
             if content.parts[0].function_response.response is None:
                 raise Exception(f'Function {function_call_part.name} returned no response')
+            messages.append(content)
             if verbose:
                 print(f'-> {content.parts[0].function_response.response}')
-    if verbose:
-        print("User prompt:", sys.argv[1])
-        print("Prompt tokens:", generatedContent.usage_metadata.prompt_token_count)
-        print("Response tokens:", generatedContent.usage_metadata.candidates_token_count)
+                
+        if verbose:
+            print("User prompt:", sys.argv[1])
+            print("Prompt tokens:", response.usage_metadata.prompt_token_count)
+            print("Response tokens:", response.usage_metadata.candidates_token_count)
 
 
 main()
